@@ -9,10 +9,13 @@ interface Props {
 
 export const UserCard: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
-  const currentTemp = user.weather?.current_weather.temperature;
-  const weatherCode = user.weather?.current_weather.weathercode ?? 0;
-  const minTemp = user.weather?.daily.temperature_2m_min[0];
-  const maxTemp = user.weather?.daily.temperature_2m_max[0];
+
+  const currentTemp = user.weather?.current_weather?.temperature;
+  const weatherCode = user.weather?.current_weather?.weathercode ?? 0;
+  const minTemp = user.weather?.daily?.temperature_2m_min?.[0];
+  const maxTemp = user.weather?.daily?.temperature_2m_max?.[0];
+
+  const hasWeatherData = user.weather !== null && user.weather !== undefined;
 
   return (
     <div 
@@ -34,14 +37,20 @@ export const UserCard: React.FC<Props> = ({ user }) => {
       </div>
 
       <div className="bg-indigo-50 rounded-lg p-3 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          {getWeatherIcon(weatherCode)}
-          <span className="font-bold text-2xl">{currentTemp}°C</span>
-        </div>
-        <div className="text-xs text-gray-600 flex flex-col items-end">
-          <span>Min: {minTemp}°</span>
-          <span>Max: {maxTemp}°</span>
-        </div>
+        {hasWeatherData ? (
+          <>
+            <div className="flex items-center gap-2">
+              {getWeatherIcon(weatherCode)}
+              <span className="font-bold text-2xl">{currentTemp}°C</span>
+            </div>
+            <div className="text-xs text-gray-600 flex flex-col items-end">
+              <span>Min: {minTemp}°</span>
+              <span>Max: {maxTemp}°</span>
+            </div>
+          </>
+        ) : (
+          <span className="text-sm text-gray-400 w-full text-center">Погода недоступна</span>
+        )}
       </div>
     </div>
   );

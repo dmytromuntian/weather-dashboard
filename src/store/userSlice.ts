@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
 import type { User, UserState } from '../types';
+import axios from 'axios';
 
 const initialState: UserState = {
   users: [],
@@ -13,11 +13,9 @@ export const fetchUsersAndWeather = createAsyncThunk(
   'users/fetchUsersAndWeather',
   async (_, { rejectWithValue }) => {
     try {
-      // 1. Завантажуємо юзерів
       const response = await axios.get('https://randomuser.me/api/?results=10');
       const rawUsers = response.data.results;
 
-      // 2. Створюємо масив промісів для погоди
       const weatherPromises = rawUsers.map((user: any) => {
         const { latitude, longitude } = user.location.coordinates;
         return axios.get(
@@ -25,22 +23,29 @@ export const fetchUsersAndWeather = createAsyncThunk(
         );
       });
 
-      const weatherResponses = await Promise.all(weatherPromises);
+      const weatherResults = await Promise.allSettled(weatherPromises);
 
-      // 4. Об'єднуємо дані
-      const mergedUsers: User[] = rawUsers.map((user: any, index: number) => ({
-        uuid: user.login.uuid, 
-        name: user.name,
-        email: user.email,
-        gender: user.gender,
-        picture: user.picture,
-        location: user.location,
-        weather: weatherResponses[index].data,
-      }));
+      const mergedUsers: User[] = rawUsers.map((user: any, index: number) => {
+        const weatherResult = weatherResults[index];
+        
+        const weatherData = weatherResult.status === 'fulfilled' 
+          ? weatherResult.value.data 
+          : null; 
+
+        return {
+          uuid: user.login.uuid,
+          name: user.name,
+          email: user.email,
+          gender: user.gender,
+          picture: user.picture,
+          location: user.location,
+          weather: weatherData,
+        };
+      });
 
       return mergedUsers;
     } catch (err) {
-      return rejectWithValue('Failed to fetch data');
+      return rejectWithValue('Не вдалося завантажити список користувачів. Спробуйте ще раз.');
     }
   }
 );
@@ -53,6 +58,7 @@ const userSlice = createSlice({
     builder
       .addCase(fetchUsersAndWeather.pending, (state) => {
         state.status = 'loading';
+        state.error = null;
       })
       .addCase(fetchUsersAndWeather.fulfilled, (state, action: PayloadAction<User[]>) => {
         state.status = 'succeeded';
